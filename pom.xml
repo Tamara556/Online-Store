@@ -35,7 +35,7 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -52,10 +52,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.vmware.tanzu.springcloudgateway.extensions</groupId>
-            <artifactId>access-control</artifactId>
         </dependency>
         <dependency>
             <groupId>org.liquibase</groupId>
@@ -99,13 +95,6 @@
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.vmware.tanzu.springcloudgateway.extensions</groupId>
-                <artifactId>extensions-bom</artifactId>
-                <version>${tanzu-scg-extensions.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

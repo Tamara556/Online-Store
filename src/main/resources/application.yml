@@ -1,0 +1,13 @@
+spring:
+ datasource:
+  url: jdbc:postgresql://localhost:5432/online_shop
+  username: localhost
+  password: password
+ jpa:
+  show-sql: true
+  hibernate:
+   ddl-auto: update
+
+jwt:
+ secret: myjwtsecretkey1234567890
+ expiration: 3600000
