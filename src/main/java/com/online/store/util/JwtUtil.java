@@ -4,52 +4,98 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
+
+import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 @Component
 public class JwtUtil {
     @Value("${jwt.secret}")
-    private String secretKey;
+    private String secret;
 
     @Value("${jwt.expiration}")
-    private long jwtExpirationMs;
+    private Long expiration;
 
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secretKey.getBytes());
+    public String getUsernameFromToken(String token) {
+        return getClaimFromToken(token, Claims::getSubject);
     }
 
-    public String extractUsername(String token) {
-        return getClaims(token).getSubject();
+    public Date getExpirationDateFromToken(String token) {
+        return getClaimFromToken(token, Claims::getExpiration);
     }
 
-    public String generateToken(String username) {
+    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = getAllClaimsFromToken(token);
+        return claimsResolver.apply(claims);
+    }
+
+    private Claims getAllClaimsFromToken(String token) {
+        return Jwts.parser()
+                .setSigningKey(getSignInKey())
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    private Boolean isTokenExpired(String token) {
+        final Date expiration = getExpirationDateFromToken(token);
+        return expiration.before(new Date());
+    }
+
+    public String generateToken(String email) {
+        Map<String, Object> claims = new HashMap<>();
+        return doGenerateToken(claims, email);
+    }
+
+    private String doGenerateToken(Map<String, Object> claims, String subject) {
+        final Date createdDate = new Date();
+        final Date expirationDate = calculateExpirationDate(createdDate);
+
         return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(createdDate)
+                .setExpiration(expirationDate)
+                .signWith(getSignInKey(), SignatureAlgorithm.HS512)
                 .compact();
     }
 
-    public boolean validateToken(String token, String username) {
-        return (username.equals(extractUsername(token)) && !isTokenExpired(token));
+
+    public String refreshToken(String token) {
+        final Date createdDate = new Date();
+        final Date expirationDate = calculateExpirationDate(createdDate);
+
+        final Claims claims = getAllClaimsFromToken(token);
+        claims.setIssuedAt(createdDate);
+        claims.setExpiration(expirationDate);
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
-    private boolean isTokenExpired(String token) {
-        return getClaims(token).getExpiration().before(new Date());
+    public Boolean validateToken(String token, String email) {
+
+        final String username = getUsernameFromToken(token);
+        return (
+                username.equals(email)
+                        && !isTokenExpired(token));
     }
 
-    private Claims getClaims(String token) {
-        return Jwts.parser()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+    private Date calculateExpirationDate(Date createdDate) {
+        return new Date(createdDate.getTime() + expiration * 1000);
+    }
+
+    private Key getSignInKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }
