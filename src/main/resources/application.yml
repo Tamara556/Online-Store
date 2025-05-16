@@ -8,6 +8,14 @@ spring:
    hibernate:
     dialect: org.hibernate.dialect.MySQLDialect
 
+ web:
+  resources:
+   static-locations: classpath:/static/
+ mvc:
+  view:
+   prefix: /static/
+
+
 jwt:
  secret: R29Cb29raW5nIGlzIHZlcnkgZ29vZCBuaWNlIGJlYXR5ZnVsIGFwcGxpY2F0aW9uIGluIHRoZSB3b3JsZCBhbmQgZ2FsYWN0aWM=
  expiration: 600000
