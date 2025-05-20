@@ -1,13 +1,42 @@
 package com.online.store.service;
 
+import com.online.store.dto.UpdateUserRequest;
+import com.online.store.dto.UserDto;
 import com.online.store.entity.User;
+import com.online.store.repository.UserRepository;
+import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
+@Service
+public class UserService {
+    private final UserRepository userRepository;
 
-public interface UserService {
-    User registerUser(User user);
-    List<User> getAllUsers();
-    User getUserById(int id);
-    Optional<User> findByUserName(String username);
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    public void update(UpdateUserRequest request, User user) {
+        if (request.getUserName() != null) {
+            user.setUsername(request.getUserName());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+    }
+    private UserDto mapToDTO(User user) {
+        UserDto dto = new UserDto();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        return dto;
+    }
+
+    public UserDto updateUser(Long id, UpdateUserRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        update(request, user);
+
+        User updatedUser = userRepository.save(user);
+
+        return mapToDTO(updatedUser);
+    }
 }

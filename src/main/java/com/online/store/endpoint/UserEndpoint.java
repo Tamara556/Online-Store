@@ -1,63 +1,90 @@
 package com.online.store.endpoint;
 
-import com.online.store.entity.User;
+import com.online.store.dto.RegisterUserRequest;
+import com.online.store.dto.UpdateUserRequest;
+import com.online.store.dto.UserDto;
+import com.online.store.mapper.UserMapper;
+import com.online.store.repository.UserRepository;
 import com.online.store.service.UserService;
-import com.online.store.util.JwtUtil;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.IOException;
-import java.util.Map;
+import java.util.Set;
 
 @RestController
-@RequestMapping("api/auth")
-@RequiredArgsConstructor
+@RequestMapping("/users")
+@AllArgsConstructor
 public class UserEndpoint {
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
     private final UserService userService;
-    private final UserDetailsService userDetailsService;
 
-    @PostMapping("/register")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "409", description = "Email already exists"),
-            @ApiResponse(responseCode = "200", description = "Registration is success")
-    })
-    public ResponseEntity<?> register(@RequestBody User user) {
-        userService.registerUser(user);
-        return ResponseEntity.ok().build();
-    }
+    @GetMapping
+    public Iterable<UserDto> getAllUsers(
+            @RequestHeader(required = false, name = "x-auth-token") String authToken,
+            @RequestParam(required = false, defaultValue = "", name = "sort") String sortBy
+    ) {
+        System.out.println("GET /users called");
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User user) {
-        try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
-            );
-            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-            String jwtToken = jwtUtil.generateToken(userDetails.getUsername());
-
-            return ResponseEntity.ok().body(Map.of(
-                    "token", jwtToken,
-                    "message", "Login successful"
-            ));
-        } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED)
-                    .body(Map.of("error", "Invalid credentials"));
+        if (!Set.of("username", "email").contains(sortBy)) {
+            sortBy = "username";
         }
+
+        return userRepository.findAll(Sort.by(sortBy))
+                .stream()
+                .map(userMapper::toDto)
+                .toList();
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDto> getUser(@PathVariable Long id){
+        var user = userRepository.findById(id).orElse(null);
+        if(user == null){
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(userMapper.toDto(user));
+    }
+
+    @PostMapping
+    public ResponseEntity<UserDto> createUser(
+            @RequestBody RegisterUserRequest request,
+            UriComponentsBuilder uriBuilder
+    ){
+        var user = userMapper.toEntity(request);
+        userRepository.save(user);
+
+        var userDto =userMapper.toDto(user);
+        var uri = uriBuilder.path("/users/{id}").buildAndExpand(userDto.getId()).toUri();
+
+        return ResponseEntity.created(uri).body(userDto);
+
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDto> updateUser(
+            @PathVariable(name = "id") Long id,
+            @RequestBody UpdateUserRequest request){
+        var user = userRepository.findById(id).orElse(null);
+        if(user == null){
+            return ResponseEntity.notFound().build();
+        }
+        userService.update(request, user);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(userMapper.toDto(user));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id){
+        var user = userRepository.findById(id).orElse(null);
+        if(user == null){
+            return ResponseEntity.notFound().build();
+        }
+
+        userRepository.delete(user);
+        return ResponseEntity.noContent().build();
+    }
 }
