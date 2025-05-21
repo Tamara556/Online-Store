@@ -11,15 +11,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @Entity
-public class User {
+public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    private String  username;
+    private String name;
 
-    private String password;
+    private int price;
 
-    private String email;
+    private String description;
 
+    private int qty;
 }
