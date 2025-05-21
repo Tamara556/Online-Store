@@ -6,6 +6,7 @@ import com.online.store.entity.Product;
 import com.online.store.mapper.ProductMapper;
 import com.online.store.repository.ProductRepository;
 import com.online.store.repository.UserRepository;
+import com.online.store.service.ProductService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ import java.util.Set;
 public class ProductEndpoint {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
-    private final UserRepository userRepository;
+    private final ProductService productService;
 
     @GetMapping
     public Iterable<ProductDto> getAllProducts(@RequestParam(required = false, defaultValue = "", name = "sort")String sortBy){
@@ -54,6 +55,31 @@ public class ProductEndpoint {
                 .toUri();
 
         return ResponseEntity.created(uri).body(productDto);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductDto> updateProduct(
+            @PathVariable(name = "id") Long id,
+            @RequestBody ProductDto request
+    ){
+        var product = productRepository.findById(id).orElse(null);
+        if (product == null) {
+            return ResponseEntity.notFound().build();
+        }
+        productService.update(request, product);
+        productRepository.save(product);
+
+        return ResponseEntity.ok(productMapper.toDto(product));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id){
+        var product = productRepository.findById(id).orElse(null);
+        if (product == null){
+            return ResponseEntity.notFound().build();
+        }
+        productRepository.delete(product);
+        return ResponseEntity.noContent().build();
     }
 
 

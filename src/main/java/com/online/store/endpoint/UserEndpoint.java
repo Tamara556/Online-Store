@@ -65,7 +65,7 @@ public class UserEndpoint {
     }
 
 
-    @PutMapping
+    @PutMapping("/{id}")
     public ResponseEntity<UserDto> updateUser(
             @PathVariable(name = "id") int id,
             @RequestBody UpdateUserRequest request){
