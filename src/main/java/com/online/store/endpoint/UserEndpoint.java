@@ -40,7 +40,7 @@ public class UserEndpoint {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUser(@PathVariable Long id){
+    public ResponseEntity<UserDto> getUser(@PathVariable int id){
         var user = userRepository.findById(id).orElse(null);
         if(user == null){
             return ResponseEntity.notFound().build();
@@ -52,20 +52,22 @@ public class UserEndpoint {
     public ResponseEntity<UserDto> createUser(
             @RequestBody RegisterUserRequest request,
             UriComponentsBuilder uriBuilder
-    ){
+    ) {
+        System.out.println(request.getUsername());
         var user = userMapper.toEntity(request);
+        System.out.println(user.getUsername());
         userRepository.save(user);
 
-        var userDto =userMapper.toDto(user);
+        var userDto = userMapper.toDto(user);
         var uri = uriBuilder.path("/users/{id}").buildAndExpand(userDto.getId()).toUri();
 
         return ResponseEntity.created(uri).body(userDto);
-
     }
 
-    @PutMapping("/{id}")
+
+    @PutMapping
     public ResponseEntity<UserDto> updateUser(
-            @PathVariable(name = "id") Long id,
+            @PathVariable(name = "id") int id,
             @RequestBody UpdateUserRequest request){
         var user = userRepository.findById(id).orElse(null);
         if(user == null){
@@ -78,7 +80,7 @@ public class UserEndpoint {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id){
+    public ResponseEntity<Void> deleteUser(@PathVariable int id){
         var user = userRepository.findById(id).orElse(null);
         if(user == null){
             return ResponseEntity.notFound().build();
