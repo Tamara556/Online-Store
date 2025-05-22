@@ -1,34 +1,40 @@
 package com.online.store.endpoint;
 
-import com.online.store.dto.RegisterUserRequest;
-import com.online.store.dto.UpdateUserRequest;
-import com.online.store.dto.UserDto;
+import com.online.store.dto.*;
+import com.online.store.entity.User;
 import com.online.store.mapper.UserMapper;
 import com.online.store.repository.UserRepository;
 import com.online.store.service.UserService;
+import com.online.store.util.JwtUtil;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Optional;
 import java.util.Set;
 
 @RestController
 @RequestMapping("/users")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class UserEndpoint {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil tokenUtil;
 
     @GetMapping
     public Iterable<UserDto> getAllUsers(
             @RequestHeader(required = false, name = "x-auth-token") String authToken,
             @RequestParam(required = false, defaultValue = "", name = "sort") String sortBy
     ) {
-        System.out.println("GET /users called");
-
         if (!Set.of("username", "email").contains(sortBy)) {
             sortBy = "username";
         }
@@ -59,9 +65,8 @@ public class UserEndpoint {
         userRepository.save(user);
 
         var userDto = userMapper.toDto(user);
-        var uri = uriBuilder.path("/users/{id}").buildAndExpand(userDto.getId()).toUri();
 
-        return ResponseEntity.created(uri).body(userDto);
+        return ResponseEntity.ok(userDto);
     }
 
 
@@ -88,5 +93,51 @@ public class UserEndpoint {
 
         userRepository.delete(user);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/register")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "409", description = "Email already in use"),
+            @ApiResponse(responseCode = "200", description = "successful register")
+    })
+    public ResponseEntity<?> register(
+            @RequestBody SaveUserRequest saveUserRequest
+    ){
+        if (userService.findByEmail(saveUserRequest.getEmail()).isPresent()){
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .build();
+        }
+        saveUserRequest.setPassword(passwordEncoder.encode(saveUserRequest.getPassword()));
+        userService.save(userMapper.toEntity(saveUserRequest));
+        return ResponseEntity.ok().build();
+    }
+
+
+    @PostMapping("/login")
+    public ResponseEntity<UserResponse> login (@RequestBody UserRequest request) {
+        Optional<User> byEmail = userService.findByEmail(request.getEmail());
+
+        if(byEmail.isEmpty()){
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .build();
+        }
+
+        User user = byEmail.get();
+        if (passwordEncoder.matches(request.getPassword(), user.getPassword())){
+            return ResponseEntity
+                    .ok(UserResponse.builder()
+                            .token(tokenUtil.generateToken(user.getEmail()))
+                            .username(user.getUsername())
+                            .email(user.getEmail())
+                            .id(user.getId())
+                            .build()
+                    );
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .build();
     }
 }
