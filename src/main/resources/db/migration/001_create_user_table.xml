@@ -8,14 +8,17 @@
             <column name="id" autoIncrement="true" type="INT">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="username" autoIncrement="false" type="varchar(255)">
+            <column name="username" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="email" autoIncrement="false" type="varchar(255)">
+            <column name="email" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="password" autoIncrement="false" type="varchar(255)">
+            <column name="password" type="varchar(255)">
                 <constraints nullable="false"/>
+            </column>
+            <column name="role" type="ENUM('ADMIN','USER')">
+<!--                <constraints nullable="false"/>-->
             </column>
         </createTable>
     </changeSet>
