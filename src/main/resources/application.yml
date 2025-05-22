@@ -14,5 +14,8 @@ spring:
   enabled: true
   change-log: classpath:/db/changelog.xml
 
-
+online-store:
+ jwt:
+  secret: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0
+  expiration: 99999999
 
