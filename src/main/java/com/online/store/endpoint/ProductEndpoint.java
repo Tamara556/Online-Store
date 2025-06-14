@@ -19,6 +19,7 @@ import java.util.Set;
 @RequestMapping("/products")
 @AllArgsConstructor
 public class ProductEndpoint {
+    
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final ProductService productService;
